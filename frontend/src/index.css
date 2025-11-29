@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Custom UI Enhancements - Force Dark Mode Styling */
+
+/* Force dark backgrounds */
+body {
+    background-color: #1a1a1a !important;
+    color: #e5e5e5 !important;
+}
+
+.card {
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 1rem !important;
+    padding: 1.5rem !important;
+    background-color: #2a2a2a !important;
+}
+
+.btn {
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 0.75rem !important;
+    padding: 0.75rem 1.5rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    font-weight: 500 !important;
+    min-height: 2.5rem !important;
+    background-color: #3a3a3a !important;
+    color: #e5e5e5 !important;
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    background-color: #4a4a4a !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.btn svg {
+    flex-shrink: 0;
+}
+
+.btn-primary {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.btn-outline {
+    background-color: transparent !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.btn-outline:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.table {
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 0.75rem !important;
+    overflow: hidden !important;
+    background-color: #2a2a2a !important;
+}
+
+.table th {
+    background-color: #3a3a3a !important;
+    text-align: center !important;
+    padding: 1rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+    color: #e5e5e5 !important;
+}
+
+.table td {
+    text-align: center !important;
+    padding: 1rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background-color: #2a2a2a !important;
+    color: #e5e5e5 !important;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.table tbody tr:hover td {
+    background-color: #333333 !important;
+}
+
+.input,
+.select,
+.textarea {
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 0.75rem !important;
+    padding: 0.75rem 1rem !important;
+    background-color: #2a2a2a !important;
+    color: #e5e5e5 !important;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+    outline: none !important;
+    border-color: #3b82f6 !important;
+    background-color: #2a2a2a !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Recharts overrides for dark mode compatibility if needed */

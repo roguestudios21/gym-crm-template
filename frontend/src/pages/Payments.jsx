@@ -1,0 +1,176 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../api';
+import { Search, FileText, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+const Payments = () => {
+    const navigate = useNavigate();
+    const [payments, setPayments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterMode, setFilterMode] = useState('');
+
+    useEffect(() => {
+        fetchPayments();
+    }, [filterMode]);
+
+    const fetchPayments = async () => {
+        setLoading(true);
+        try {
+            let url = '/payments';
+            if (filterMode) {
+                url += `?paymentMode=${filterMode}`;
+            }
+            const res = await api.get(url);
+            setPayments(res.data.payments || []);
+        } catch (error) {
+            console.error("Failed to fetch payments", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const generateReceipt = (payment) => {
+        const doc = new jsPDF();
+
+        doc.setFontSize(20);
+        doc.text("PAYMENT RECEIPT", 105, 20, null, null, "center");
+
+        doc.setFontSize(10);
+        doc.text(`Receipt #: ${payment.paymentNumber || 'PENDING'}`, 14, 40);
+        doc.text(`Date: ${new Date(payment.paymentDate).toLocaleDateString()}`, 14, 45);
+
+        doc.text("Received From:", 14, 55);
+        doc.setFont("helvetica", "bold");
+        doc.text(payment.memberID?.name || 'Unknown Member', 14, 60);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(`Amount Received: $${payment.amount.toFixed(2)}`, 14, 70);
+        doc.text(`Payment Mode: ${payment.paymentMode.toUpperCase()}`, 14, 75);
+        if (payment.transactionID) {
+            doc.text(`Transaction ID: ${payment.transactionID}`, 14, 80);
+        }
+
+        doc.text(`For Invoice: ${payment.invoiceID?.invoiceNumber || 'N/A'}`, 14, 90);
+
+        doc.save(`Receipt-${payment.paymentNumber || 'draft'}.pdf`);
+    };
+
+    const filteredPayments = payments.filter(p =>
+        p.memberID?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.invoiceID?.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">Payments</h1>
+            </div>
+
+            {/* Filters */}
+            <div className="card bg-base-100 shadow-xl p-4 mb-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="form-control flex-1">
+                        <div className="input-group">
+                            <input
+                                type="text"
+                                placeholder="Search member or invoice..."
+                                className="input input-bordered w-full"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            <button className="btn btn-square">
+                                <Search size={20} />
+                            </button>
+                        </div>
+                    </div>
+                    <select
+                        className="select select-bordered w-full md:w-48"
+                        value={filterMode}
+                        onChange={(e) => setFilterMode(e.target.value)}
+                    >
+                        <option value="">All Modes</option>
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="upi">UPI</option>
+                        <option value="netbanking">Net Banking</option>
+                        <option value="cheque">Cheque</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* Payments Table */}
+            <div className="card bg-base-100 shadow-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="table w-full">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Member</th>
+                                <th>Invoice</th>
+                                <th>Amount</th>
+                                <th>Mode</th>
+                                <th>Reference</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan="7" className="text-center py-8">
+                                        <span className="loading loading-spinner loading-lg"></span>
+                                    </td>
+                                </tr>
+                            ) : filteredPayments.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="text-center py-8 text-base-content/60">
+                                        No payments found
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredPayments.map((payment) => (
+                                    <tr key={payment._id} className="hover">
+                                        <td>{new Date(payment.paymentDate).toLocaleDateString()}</td>
+                                        <td>
+                                            <div className="font-semibold">{payment.memberID?.name}</div>
+                                        </td>
+                                        <td>
+                                            <button
+                                                className="btn btn-link btn-xs"
+                                                onClick={() => navigate(`/invoices/${payment.invoiceID?._id}`)}
+                                            >
+                                                {payment.invoiceID?.invoiceNumber}
+                                            </button>
+                                        </td>
+                                        <td className="font-bold text-success">${payment.amount.toFixed(2)}</td>
+                                        <td>
+                                            <div className="badge badge-ghost uppercase text-xs">
+                                                {payment.paymentMode}
+                                            </div>
+                                        </td>
+                                        <td className="font-mono text-xs">
+                                            {payment.transactionID || '-'}
+                                        </td>
+                                        <td>
+                                            <button
+                                                className="btn btn-ghost btn-xs tooltip"
+                                                data-tip="Download Receipt"
+                                                onClick={() => generateReceipt(payment)}
+                                            >
+                                                <Download size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Payments;
