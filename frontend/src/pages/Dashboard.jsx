@@ -31,6 +31,7 @@ const Dashboard = () => {
     });
     const [expiringMembers, setExpiringMembers] = useState([]);
     const [todayAppointmentsList, setTodayAppointmentsList] = useState([]);
+    const [salesHistory, setSalesHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -39,12 +40,13 @@ const Dashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const [membersRes, salesRes, appointmentsRes, attendanceRes, expiringRes] = await Promise.all([
+            const [membersRes, salesRes, appointmentsRes, attendanceRes, expiringRes, historyRes] = await Promise.all([
                 api.get('/members?status=active'),
                 api.get('/sales/report'),
                 api.get('/appointments'),
                 api.get('/attendance/current'),
-                api.get('/members/expiring/list')
+                api.get('/members/expiring/list'),
+                api.get('/sales/history?period=week')
             ]);
 
             // Filter today's appointments
@@ -62,6 +64,16 @@ const Dashboard = () => {
 
             setTodayAppointmentsList(todaysApps.slice(0, 5)); // Show top 5
             setExpiringMembers(expiringRes.data.slice(0, 5)); // Show top 5
+            setSalesHistory(historyRes.data && historyRes.data.length > 0 ? historyRes.data : [
+                // Fallback to mock data if no sales yet
+                { name: 'Mon', sales: 0 },
+                { name: 'Tue', sales: 0 },
+                { name: 'Wed', sales: 0 },
+                { name: 'Thu', sales: 0 },
+                { name: 'Fri', sales: 0 },
+                { name: 'Sat', sales: 0 },
+                { name: 'Sun', sales: 0 },
+            ]);
 
         } catch (error) {
             console.error("Error fetching dashboard data", error);
@@ -69,17 +81,6 @@ const Dashboard = () => {
             setLoading(false);
         }
     };
-
-    // Mock data for chart (replace with real sales history if available)
-    const data = [
-        { name: 'Mon', sales: 4000 },
-        { name: 'Tue', sales: 3000 },
-        { name: 'Wed', sales: 2000 },
-        { name: 'Thu', sales: 2780 },
-        { name: 'Fri', sales: 1890 },
-        { name: 'Sat', sales: 2390 },
-        { name: 'Sun', sales: 3490 },
-    ];
 
     if (loading) return (
         <div className="flex justify-center items-center h-screen">
@@ -159,7 +160,7 @@ const Dashboard = () => {
                     </div>
                     <div className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data}>
+                            <BarChart data={salesHistory}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
                                 <YAxis axisLine={false} tickLine={false} />

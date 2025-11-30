@@ -41,11 +41,19 @@ router.post("/convert/:id", async (req, res) => {
     const enquiry = await Enquiry.findById(req.params.id);
 
     const newMember = new Member({
-      name: enquiry.remarks,
-      status: "ACTIVE",
+      name: enquiry.name,
+      contact1: enquiry.contact,
+      email: enquiry.email,
+      status: "active",
+      // Map other fields as needed or leave for manual update
     });
 
     await newMember.save();
+
+    // Update enquiry status
+    enquiry.status = 'converted';
+    await enquiry.save();
+
     res.json({ success: true, newMember });
   } catch (err) {
     res.status(500).json({ error: err.message });

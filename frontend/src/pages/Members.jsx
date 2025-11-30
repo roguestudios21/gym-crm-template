@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Users as UsersIcon } from 'lucide-react';
+import useToast from '../hooks/useToast';
+import Toast from '../components/Toast';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 const Members = () => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const { toasts, error, success, removeToast } = useToast();
 
     useEffect(() => {
         fetchMembers();
@@ -16,20 +21,25 @@ const Members = () => {
         try {
             const res = await api.get('/members');
             setMembers(res.data);
-        } catch (error) {
-            console.error("Failed to fetch members", error);
+        } catch (err) {
+            console.error("Failed to fetch members", err);
+            error(err.response?.data?.error || 'Failed to load members. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     const filteredMembers = members.filter(member =>
-        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        (member.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (member.email || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <div>
+            {toasts.map(toast => (
+                <Toast key={toast.id} {...toast} onClose={() => removeToast(toast.id)} />
+            ))}
+
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">Members</h1>
                 <Link to="/members/new" className="btn btn-primary">
@@ -52,25 +62,35 @@ const Members = () => {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="table w-full">
-                        <thead>
-                            <tr>
-                                <th>Member ID</th>
-                                <th>Name</th>
-                                <th>Plan</th>
-                                <th>Contact</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan="6" className="text-center py-4">Loading...</td></tr>
-                            ) : filteredMembers.length === 0 ? (
-                                <tr><td colSpan="6" className="text-center py-4">No members found</td></tr>
-                            ) : (
-                                filteredMembers.map(member => (
+                {loading ? (
+                    <LoadingSpinner message="Loading members..." />
+                ) : filteredMembers.length === 0 ? (
+                    <EmptyState
+                        icon={UsersIcon}
+                        title={searchTerm ? "No members found" : "No members yet"}
+                        message={searchTerm ? "Try adjusting your search criteria" : "Get started by adding your first gym member"}
+                        action={!searchTerm && (
+                            <Link to="/members/new" className="btn btn-primary">
+                                <Plus size={18} />
+                                Add First Member
+                            </Link>
+                        )}
+                    />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Member ID</th>
+                                    <th>Name</th>
+                                    <th>Plan</th>
+                                    <th>Contact</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredMembers.map(member => (
                                     <tr key={member.memberID}>
                                         <td><span className="badge badge-ghost">{member.memberID}</span></td>
                                         <td>
@@ -78,13 +98,25 @@ const Members = () => {
                                                 {member.profilePicture ? (
                                                     <div className="avatar">
                                                         <div className="w-10 h-10 rounded-full">
-                                                            <img src={member.profilePicture} alt={member.name} />
+                                                            <img
+                                                                src={member.profilePicture}
+                                                                alt={member.name}
+                                                                onError={(e) => {
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.nextElementSibling.style.display = 'flex';
+                                                                }}
+                                                            />
+                                                            <div className="avatar placeholder" style={{ display: 'none' }}>
+                                                                <div className="bg-neutral-focus text-neutral-content rounded-full w-10 h-10 flex items-center justify-center">
+                                                                    <span>{member.name?.charAt(0) || '?'}</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     <div className="avatar placeholder">
                                                         <div className="bg-neutral-focus text-neutral-content rounded-full w-10 h-10 flex items-center justify-center">
-                                                            <span>{member.name.charAt(0)}</span>
+                                                            <span>{member.name?.charAt(0) || '?'}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -107,11 +139,11 @@ const Members = () => {
                                             </Link>
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );

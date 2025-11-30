@@ -79,18 +79,18 @@ const InvoiceView = () => {
         // Member Info
         doc.text("Bill To:", 140, 30);
         doc.setFont("helvetica", "bold");
-        doc.text(invoice.memberID.name, 140, 35);
+        doc.text(invoice.memberID?.name || 'Unknown Member', 140, 35);
         doc.setFont("helvetica", "normal");
-        doc.text(invoice.memberID.email || '', 140, 40);
-        doc.text(invoice.memberID.contact1 || '', 140, 45);
+        doc.text(invoice.memberID?.email || '', 140, 40);
+        doc.text(invoice.memberID?.contact1 || '', 140, 45);
 
         // Items Table
         const tableColumn = ["Description", "Qty", "Unit Price", "Amount"];
         const tableRows = invoice.items.map(item => [
-            item.description,
-            item.quantity,
-            `$${item.unitPrice.toFixed(2)}`,
-            `$${item.amount.toFixed(2)}`
+            item.description || 'Item',
+            item.quantity || 0,
+            `$${(item.unitPrice || 0).toFixed(2)}`,
+            `$${(item.amount || 0).toFixed(2)}`
         ]);
 
         doc.autoTable({
@@ -102,18 +102,18 @@ const InvoiceView = () => {
         // Totals
         const finalY = doc.lastAutoTable.finalY + 10;
 
-        doc.text(`Subtotal: $${invoice.subtotal.toFixed(2)}`, 140, finalY);
-        doc.text(`Tax: $${invoice.tax.toFixed(2)}`, 140, finalY + 5);
-        doc.text(`Discount: -$${invoice.discount.toFixed(2)}`, 140, finalY + 10);
+        doc.text(`Subtotal: $${(invoice.subtotal || 0).toFixed(2)}`, 140, finalY);
+        doc.text(`Tax: $${(invoice.tax || 0).toFixed(2)}`, 140, finalY + 5);
+        doc.text(`Discount: -$${(invoice.discount || 0).toFixed(2)}`, 140, finalY + 10);
 
         doc.setFont("helvetica", "bold");
-        doc.text(`Total: $${invoice.totalAmount.toFixed(2)}`, 140, finalY + 20);
+        doc.text(`Total: $${(invoice.totalAmount || 0).toFixed(2)}`, 140, finalY + 20);
 
         doc.setTextColor(0, 128, 0);
-        doc.text(`Paid: $${invoice.paidAmount.toFixed(2)}`, 140, finalY + 25);
+        doc.text(`Paid: $${(invoice.paidAmount || 0).toFixed(2)}`, 140, finalY + 25);
 
         doc.setTextColor(255, 0, 0);
-        doc.text(`Balance: $${invoice.balanceAmount.toFixed(2)}`, 140, finalY + 30);
+        doc.text(`Balance: $${(invoice.balanceAmount || 0).toFixed(2)}`, 140, finalY + 30);
 
         doc.save(`Invoice-${invoice.invoiceNumber}.pdf`);
     };
@@ -152,10 +152,10 @@ const InvoiceView = () => {
                         <div className="flex justify-between mb-8">
                             <div>
                                 <h3 className="text-gray-500 text-sm uppercase font-bold">Billed To</h3>
-                                <p className="text-xl font-bold mt-2">{invoice.memberID.name}</p>
-                                <p>{invoice.memberID.email}</p>
-                                <p>{invoice.memberID.contact1}</p>
-                                <p className="mt-2 text-sm text-gray-500">{invoice.memberID.address}</p>
+                                <p className="text-xl font-bold mt-2">{invoice.memberID?.name || 'Unknown Member'}</p>
+                                <p>{invoice.memberID?.email}</p>
+                                <p>{invoice.memberID?.contact1}</p>
+                                <p className="mt-2 text-sm text-gray-500">{invoice.memberID?.address}</p>
                             </div>
                             <div className="text-right">
                                 <h3 className="text-gray-500 text-sm uppercase font-bold">Invoice Details</h3>
@@ -176,10 +176,10 @@ const InvoiceView = () => {
                             <tbody>
                                 {invoice.items.map((item, idx) => (
                                     <tr key={idx}>
-                                        <td>{item.description}</td>
-                                        <td className="text-center">{item.quantity}</td>
-                                        <td className="text-right">${item.unitPrice.toFixed(2)}</td>
-                                        <td className="text-right font-bold">${item.amount.toFixed(2)}</td>
+                                        <td>{item.description || 'Item'}</td>
+                                        <td className="text-center">{item.quantity || 0}</td>
+                                        <td className="text-right">${(item.unitPrice || 0).toFixed(2)}</td>
+                                        <td className="text-right font-bold">${(item.amount || 0).toFixed(2)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -189,28 +189,28 @@ const InvoiceView = () => {
                             <div className="w-64 space-y-2">
                                 <div className="flex justify-between">
                                     <span>Subtotal:</span>
-                                    <span>${invoice.subtotal.toFixed(2)}</span>
+                                    <span>${(invoice.subtotal || 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span>Tax ({invoice.taxRate}%):</span>
-                                    <span>${invoice.tax.toFixed(2)}</span>
+                                    <span>Tax ({(invoice.taxRate || 0)}%):</span>
+                                    <span>${(invoice.tax || 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-success">
                                     <span>Discount:</span>
-                                    <span>-${invoice.discount.toFixed(2)}</span>
+                                    <span>-${(invoice.discount || 0).toFixed(2)}</span>
                                 </div>
                                 <div className="divider my-2"></div>
                                 <div className="flex justify-between text-xl font-bold">
                                     <span>Total:</span>
-                                    <span>${invoice.totalAmount.toFixed(2)}</span>
+                                    <span>${(invoice.totalAmount || 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-success font-semibold">
                                     <span>Paid:</span>
-                                    <span>${invoice.paidAmount.toFixed(2)}</span>
+                                    <span>${(invoice.paidAmount || 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-error font-bold text-lg">
                                     <span>Balance:</span>
-                                    <span>${invoice.balanceAmount.toFixed(2)}</span>
+                                    <span>${(invoice.balanceAmount || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>

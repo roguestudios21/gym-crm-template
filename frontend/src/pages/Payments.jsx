@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Search, FileText, Download } from 'lucide-react';
+import { Search, FileText, Download, DollarSign } from 'lucide-react';
+import useToast from '../hooks/useToast';
+import Toast from '../components/Toast';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -11,6 +15,7 @@ const Payments = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMode, setFilterMode] = useState('');
+    const { toasts, error, success, removeToast } = useToast();
 
     useEffect(() => {
         fetchPayments();
@@ -25,46 +30,56 @@ const Payments = () => {
             }
             const res = await api.get(url);
             setPayments(res.data.payments || []);
-        } catch (error) {
-            console.error("Failed to fetch payments", error);
+        } catch (err) {
+            console.error("Failed to fetch payments", err);
+            error(err.response?.data?.error || 'Failed to load payments. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     const generateReceipt = (payment) => {
-        const doc = new jsPDF();
+        try {
+            const doc = new jsPDF();
 
-        doc.setFontSize(20);
-        doc.text("PAYMENT RECEIPT", 105, 20, null, null, "center");
+            doc.setFontSize(20);
+            doc.text("PAYMENT RECEIPT", 105, 20, null, null, "center");
 
-        doc.setFontSize(10);
-        doc.text(`Receipt #: ${payment.paymentNumber || 'PENDING'}`, 14, 40);
-        doc.text(`Date: ${new Date(payment.paymentDate).toLocaleDateString()}`, 14, 45);
+            doc.setFontSize(10);
+            doc.text(`Receipt #: ${payment.paymentNumber || 'PENDING'}`, 14, 40);
+            doc.text(`Date: ${new Date(payment.paymentDate).toLocaleDateString()}`, 14, 45);
 
-        doc.text("Received From:", 14, 55);
-        doc.setFont("helvetica", "bold");
-        doc.text(payment.memberID?.name || 'Unknown Member', 14, 60);
+            doc.text("Received From:", 14, 55);
+            doc.setFont("helvetica", "bold");
+            doc.text(payment.memberID?.name || 'Unknown Member', 14, 60);
 
-        doc.setFont("helvetica", "normal");
-        doc.text(`Amount Received: $${payment.amount.toFixed(2)}`, 14, 70);
-        doc.text(`Payment Mode: ${payment.paymentMode.toUpperCase()}`, 14, 75);
-        if (payment.transactionID) {
-            doc.text(`Transaction ID: ${payment.transactionID}`, 14, 80);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Amount Received: $${(payment.amount || 0).toFixed(2)}`, 14, 70);
+            doc.text(`Payment Mode: ${(payment.paymentMode || 'N/A').toUpperCase()}`, 14, 75);
+            if (payment.transactionID) {
+                doc.text(`Transaction ID: ${payment.transactionID}`, 14, 80);
+            }
+
+            doc.text(`For Invoice: ${payment.invoiceID?.invoiceNumber || 'N/A'}`, 14, 90);
+
+            doc.save(`Receipt-${payment.paymentNumber || 'draft'}.pdf`);
+            success('Receipt generated successfully');
+        } catch (err) {
+            error('Failed to generate receipt');
         }
-
-        doc.text(`For Invoice: ${payment.invoiceID?.invoiceNumber || 'N/A'}`, 14, 90);
-
-        doc.save(`Receipt-${payment.paymentNumber || 'draft'}.pdf`);
     };
 
     const filteredPayments = payments.filter(p =>
-        p.memberID?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.invoiceID?.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.memberID?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.invoiceID?.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <div>
+            {toasts.map(toast => (
+                <Toast key={toast.id} {...toast} onClose={() => removeToast(toast.id)} />
+            ))}
+
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">Payments</h1>
             </div>
@@ -91,86 +106,80 @@ const Payments = () => {
                         value={filterMode}
                         onChange={(e) => setFilterMode(e.target.value)}
                     >
-                        <option value="">All Modes</option>
+                        <option value="">All Methods</option>
                         <option value="cash">Cash</option>
                         <option value="card">Card</option>
                         <option value="upi">UPI</option>
-                        <option value="netbanking">Net Banking</option>
-                        <option value="cheque">Cheque</option>
+                        <option value="bank_transfer">Bank Transfer</option>
                     </select>
                 </div>
             </div>
 
             {/* Payments Table */}
             <div className="card bg-base-100 shadow-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="table w-full">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Member</th>
-                                <th>Invoice</th>
-                                <th>Amount</th>
-                                <th>Mode</th>
-                                <th>Reference</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
+                {loading ? (
+                    <LoadingSpinner message="Loading payments..." />
+                ) : filteredPayments.length === 0 ? (
+                    <EmptyState
+                        icon={DollarSign}
+                        title={searchTerm || filterMode ? "No payments found" : "No payments yet"}
+                        message={searchTerm || filterMode ? "Try adjusting your filters" : "Payments will appear here once recorded"}
+                        action={null}
+                    />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="table w-full">
+                            <thead>
                                 <tr>
-                                    <td colSpan="7" className="text-center py-8">
-                                        <span className="loading loading-spinner loading-lg"></span>
-                                    </td>
+                                    <th>Receipt #</th>
+                                    <th>Date</th>
+                                    <th>Member</th>
+                                    <th>Invoice</th>
+                                    <th>Amount</th>
+                                    <th>Mode</th>
+                                    <th>Actions</th>
                                 </tr>
-                            ) : filteredPayments.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7" className="text-center py-8 text-base-content/60">
-                                        No payments found
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredPayments.map((payment) => (
+                            </thead>
+                            <tbody>
+                                {filteredPayments.map((payment) => (
                                     <tr key={payment._id} className="hover">
+                                        <td className="font-mono font-semibold">{payment.paymentNumber || 'PENDING'}</td>
                                         <td>{new Date(payment.paymentDate).toLocaleDateString()}</td>
                                         <td>
-                                            <div className="font-semibold">{payment.memberID?.name}</div>
+                                            <div className="font-semibold">{payment.memberID?.name || 'Unknown'}</div>
+                                            <div className="text-xs opacity-50">{payment.memberID?.contact1 || ''}</div>
                                         </td>
                                         <td>
                                             <button
-                                                className="btn btn-link btn-xs"
                                                 onClick={() => navigate(`/invoices/${payment.invoiceID?._id}`)}
+                                                className="link link-primary font-mono text-sm"
                                             >
-                                                {payment.invoiceID?.invoiceNumber}
+                                                {payment.invoiceID?.invoiceNumber || 'N/A'}
                                             </button>
                                         </td>
-                                        <td className="font-bold text-success">${payment.amount.toFixed(2)}</td>
+                                        <td className="font-bold text-success">${(payment.amount || 0).toFixed(2)}</td>
                                         <td>
-                                            <div className="badge badge-ghost uppercase text-xs">
-                                                {payment.paymentMode}
-                                            </div>
-                                        </td>
-                                        <td className="font-mono text-xs">
-                                            {payment.transactionID || '-'}
+                                            <span className="badge badge-ghost">{(payment.paymentMode || 'N/A').toUpperCase()}</span>
                                         </td>
                                         <td>
                                             <button
-                                                className="btn btn-ghost btn-xs tooltip"
-                                                data-tip="Download Receipt"
                                                 onClick={() => generateReceipt(payment)}
+                                                className="btn btn-ghost btn-sm"
+                                                title="Download Receipt"
                                             >
                                                 <Download size={16} />
                                             </button>
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
 export default Payments;
+

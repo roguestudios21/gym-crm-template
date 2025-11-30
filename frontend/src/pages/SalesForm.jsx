@@ -64,11 +64,16 @@ const SalesForm = () => {
         setLoading(true);
 
         try {
-            await api.post('/sales/add', formData);
-            navigate('/sales');
+            const res = await api.post('/sales/add', formData);
+            if (res.data.invoice && res.data.invoice._id) {
+                navigate(`/invoices/${res.data.invoice._id}`);
+            } else {
+                navigate('/sales');
+            }
         } catch (error) {
             console.error("Failed to record sale", error);
-            alert("Failed to record sale");
+            const errorMsg = error.response?.data?.error || error.message || "Failed to record sale";
+            alert(errorMsg);
         } finally {
             setLoading(false);
         }
@@ -89,10 +94,10 @@ const SalesForm = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="form-control w-full">
                         <label className="label">
-                            <span className="label-text font-medium">Member (Optional)</span>
+                            <span className="label-text font-medium">Member</span>
                         </label>
-                        <select name="memberID" value={formData.memberID} onChange={handleChange} className="select select-bordered w-full">
-                            <option value="">Select Member (Guest)</option>
+                        <select required name="memberID" value={formData.memberID} onChange={handleChange} className="select select-bordered w-full">
+                            <option value="">Select Member</option>
                             {members.map(m => (
                                 <option key={m._id} value={m._id}>{m.name} ({m.memberID})</option>
                             ))}

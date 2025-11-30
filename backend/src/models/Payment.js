@@ -44,13 +44,19 @@ const paymentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Auto-generate payment number
-paymentSchema.pre('save', async function (next) {
+paymentSchema.pre('save', async function () {
     if (!this.paymentNumber) {
         const year = new Date().getFullYear();
-        const count = await mongoose.model('Payment').countDocuments();
-        this.paymentNumber = `PAY-${year}-${String(count + 1).padStart(4, '0')}`;
+        const lastPayment = await this.constructor.findOne().sort({ createdAt: -1 });
+        let nextNum = 1;
+        if (lastPayment && lastPayment.paymentNumber) {
+            const parts = lastPayment.paymentNumber.split('-');
+            if (parts.length === 3) {
+                nextNum = parseInt(parts[2]) + 1;
+            }
+        }
+        this.paymentNumber = `PAY-${year}-${String(nextNum).padStart(4, '0')}`;
     }
-    next();
 });
 
 // Indexes

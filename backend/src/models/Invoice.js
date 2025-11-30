@@ -85,11 +85,18 @@ const invoiceSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Auto-generate invoice number if not provided
-invoiceSchema.pre('save', async function (next) {
+invoiceSchema.pre('save', async function () {
     if (!this.invoiceNumber) {
         const year = new Date().getFullYear();
-        const count = await mongoose.model('Invoice').countDocuments();
-        this.invoiceNumber = `INV-${year}-${String(count + 1).padStart(4, '0')}`;
+        const lastInvoice = await this.constructor.findOne().sort({ createdAt: -1 });
+        let nextNum = 1;
+        if (lastInvoice && lastInvoice.invoiceNumber) {
+            const parts = lastInvoice.invoiceNumber.split('-');
+            if (parts.length === 3) {
+                nextNum = parseInt(parts[2]) + 1;
+            }
+        }
+        this.invoiceNumber = `INV-${year}-${String(nextNum).padStart(4, '0')}`;
     }
 
     // Calculate balance
@@ -110,8 +117,6 @@ invoiceSchema.pre('save', async function (next) {
     if (this.dueDate && this.dueDate < new Date() && this.balanceAmount > 0) {
         this.status = 'overdue';
     }
-
-    next();
 });
 
 // Indexes

@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Plus, Search, FileText, DollarSign, Eye } from 'lucide-react';
+import { Plus, Search, FileText } from 'lucide-react';
+import useToast from '../hooks/useToast';
+import Toast from '../components/Toast';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 const Invoices = () => {
     const navigate = useNavigate();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+    const { toasts, error, success, removeToast } = useToast();
 
     useEffect(() => {
         fetchInvoices();
@@ -19,12 +24,13 @@ const Invoices = () => {
         try {
             let url = '/invoices';
             if (filterStatus) {
-                url += `?status=${filterStatus}`;
+                url += `? status = ${filterStatus} `;
             }
             const res = await api.get(url);
-            setInvoices(res.data.invoices || []);
-        } catch (error) {
-            console.error("Failed to fetch invoices", error);
+            setInvoices(res.data);
+        } catch (err) {
+            console.error("Failed to fetch invoices", err);
+            error(err.response?.data?.error || 'Failed to load invoices. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -42,12 +48,21 @@ const Invoices = () => {
     };
 
     const filteredInvoices = invoices.filter(inv =>
-        inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.memberID?.name.toLowerCase().includes(searchTerm.toLowerCase())
+        (inv.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (inv.memberID?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    // Placeholder for handleRecordPayment, assuming it will be defined elsewhere or is a future addition
+    const handleRecordPayment = (invoice) => {
+        navigate(`/ invoices / ${invoice._id}?action = pay`);
+    };
 
     return (
         <div>
+            {toasts.map(toast => (
+                <Toast key={toast.id} {...toast} onClose={() => removeToast(toast.id)} />
+            ))}
+
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">Invoices</h1>
                 <button
@@ -93,76 +108,74 @@ const Invoices = () => {
 
             {/* Invoices Table */}
             <div className="card bg-base-100 shadow-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="table w-full">
-                        <thead>
-                            <tr>
-                                <th>Invoice #</th>
-                                <th>Date</th>
-                                <th>Member</th>
-                                <th>Amount</th>
-                                <th>Paid</th>
-                                <th>Balance</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
+                {loading ? (
+                    <LoadingSpinner message="Loading invoices..." />
+                ) : filteredInvoices.length === 0 ? (
+                    <EmptyState
+                        icon={FileText}
+                        title={searchTerm || filterStatus ? "No invoices found" : "No invoices yet"}
+                        message={searchTerm || filterStatus ? "Try adjusting your filters" : "Create your first invoice to get started"}
+                        action={!searchTerm && !filterStatus && (
+                            <button onClick={() => navigate('/invoices/new')} className="btn btn-primary">
+                                <Plus size={18} />
+                                Create First Invoice
+                            </button>
+                        )}
+                    />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="table w-full">
+                            <thead>
                                 <tr>
-                                    <td colSpan="8" className="text-center py-8">
-                                        <span className="loading loading-spinner loading-lg"></span>
-                                    </td>
+                                    <th>Invoice #</th>
+                                    <th>Date</th>
+                                    <th>Member</th>
+                                    <th>Amount</th>
+                                    <th>Paid</th>
+                                    <th>Balance</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
-                            ) : filteredInvoices.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8" className="text-center py-8 text-base-content/60">
-                                        No invoices found
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredInvoices.map((inv) => (
+                            </thead>
+                            <tbody>
+                                {filteredInvoices.map((inv) => (
                                     <tr key={inv._id} className="hover">
                                         <td className="font-mono font-bold">{inv.invoiceNumber}</td>
                                         <td>{new Date(inv.invoiceDate).toLocaleDateString()}</td>
                                         <td>
-                                            <div className="font-semibold">{inv.memberID?.name}</div>
-                                            <div className="text-xs opacity-50">{inv.memberID?.contact1}</div>
+                                            <div className="font-semibold">{inv.memberID?.name || 'Unknown Member'}</div>
+                                            <div className="text-xs opacity-50">{inv.memberID?.contact1 || ''}</div>
                                         </td>
-                                        <td className="font-bold">${inv.totalAmount.toFixed(2)}</td>
-                                        <td className="text-success">${inv.paidAmount.toFixed(2)}</td>
-                                        <td className="text-error">${inv.balanceAmount.toFixed(2)}</td>
+                                        <td className="font-bold">${(inv.totalAmount || 0).toFixed(2)}</td>
+                                        <td className="text-success">${(inv.paidAmount || 0).toFixed(2)}</td>
+                                        <td className="text-error">${(inv.balanceAmount || 0).toFixed(2)}</td>
                                         <td>
-                                            <div className={`badge ${getStatusBadge(inv.status)} gap-1`}>
+                                            <div className={`badge ${getStatusBadge(inv.status)} gap - 1`}>
                                                 {inv.status}
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className="flex gap-2">
+                                        <td className="flex gap-2">
+                                            <button
+                                                onClick={() => navigate(`/ invoices / ${inv._id} `)}
+                                                className="btn btn-ghost btn-sm"
+                                            >
+                                                <FileText size={16} />
+                                            </button>
+                                            {inv.status !== 'paid' && (
                                                 <button
-                                                    className="btn btn-ghost btn-xs tooltip"
-                                                    data-tip="View Details"
-                                                    onClick={() => navigate(`/invoices/${inv._id}`)}
+                                                    onClick={() => handleRecordPayment(inv)}
+                                                    className="btn btn-success btn-sm"
                                                 >
-                                                    <Eye size={16} />
+                                                    Record Payment
                                                 </button>
-                                                {inv.balanceAmount > 0 && (
-                                                    <button
-                                                        className="btn btn-ghost btn-xs text-success tooltip"
-                                                        data-tip="Record Payment"
-                                                        onClick={() => navigate(`/invoices/${inv._id}?action=pay`)}
-                                                    >
-                                                        <DollarSign size={16} />
-                                                    </button>
-                                                )}
-                                            </div>
+                                            )}
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -159,7 +159,7 @@ const Attendance = () => {
                                                         <div className="bg-primary text-primary-content rounded-full w-12 h-12">
                                                             {record.memberID?.profilePicture ? (
                                                                 <img
-                                                                    src={`http://localhost:4000${record.memberID.profilePicture}`}
+                                                                    src={record.memberID.profilePicture}
                                                                     alt={record.memberID.name}
                                                                     className="rounded-full"
                                                                 />

@@ -34,7 +34,7 @@ const memberSchema = new mongoose.Schema({
         default: []
     },
     biometric: {
-        type: Object
+        type: Object // DEPRECATED: Use biometricData instead. Kept for legacy support.
     },
     plan: {
         type: mongoose.Schema.Types.ObjectId,

@@ -22,8 +22,6 @@ const Sidebar = () => {
         { path: '/classes', icon: Calendar, label: 'Classes' },
         { path: '/products', icon: Package, label: 'Products' },
         { path: '/sales', icon: ShoppingCart, label: 'Sales' },
-        { path: '/invoices', icon: FileText, label: 'Invoices' },
-        { path: '/payments', icon: TrendingUp, label: 'Payments' },
         { path: '/reports', icon: BarChart2, label: 'Reports' },
         { path: '/notifications', icon: Bell, label: 'Notifications' },
         { path: '/enquiries', icon: HelpCircle, label: 'Enquiries' },
@@ -47,8 +45,8 @@ const Sidebar = () => {
                             <Link
                                 to={item.path}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive(item.path)
-                                        ? 'bg-primary text-primary-content font-semibold shadow-sm'
-                                        : 'hover:bg-base-200/70 text-base-content/80 hover:text-base-content'
+                                    ? 'bg-primary text-primary-content font-semibold shadow-sm'
+                                    : 'hover:bg-base-200/70 text-base-content/80 hover:text-base-content'
                                     }`}
                             >
                                 <item.icon size={20} className="shrink-0" />

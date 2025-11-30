@@ -1,11 +1,36 @@
 const express = require('express');
 const router = express.Router();
 const Member = require('../models/Member');
-const { v4: uuidv4 } = require('uuid');
-const upload = require('../utils/fileUpload');
+const Product = require('../models/Product');
+const multer = require('multer');
+const path = require('path');
+const { memberValidation } = require('../middleware/validation');
 
-// Create profile (with optional profile picture upload)
-router.post('/', upload.single('profilePicture'), async (req, res) => {
+// Configure multer for profile uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../../../uploads/profiles'));
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG and PNG images are allowed'));
+    }
+  }
+});
+
+// Create member (with validation)
+router.post('/', upload.single('profilePicture'), memberValidation, async (req, res) => {
   try {
     const {
       name, gender, DOB, contact1, contact2, email, address,
@@ -47,12 +72,26 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       startDate,
       endDate,
       spaHistory: [],
-      dietHistory: []
+      dietHistory: [],
+      // Initialize membership object
+      membership: {
+        currentPlan: plan,
+        startDate: startDate,
+        endDate: endDate,
+        status: 'active',
+        autoRenew: false,
+        history: plan ? [{
+          planID: plan,
+          startDate: startDate,
+          endDate: endDate,
+          amount: 0 // Initial creation might not have payment record here, or we could fetch price
+        }] : []
+      }
     });
 
     await newMember.save();
 
-    res.json({ success: true, memberID: id });
+    res.json({ success: true, memberID: newMember.memberID });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -130,17 +169,7 @@ router.put('/:id', upload.single('profilePicture'), async (req, res) => {
   }
 });
 
-// Freeze membership
-router.post('/:id/freeze', async (req, res) => {
-  try {
-    const id = req.params.id;
-    await Member.findOneAndUpdate({ memberID: id }, { status: 'frozen' });
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
+
 
 // Add biometric (store as JSON with vendor + base64)
 router.post('/:id/biometric', express.json(), async (req, res) => {
@@ -410,6 +439,32 @@ router.post('/:id/enroll-biometric', async (req, res) => {
       isEnrolled: true
     });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE MEMBER
+router.delete('/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Check for orphaned references
+    const Invoice = require('../models/Invoice');
+    const Payment = require('../models/Payment');
+
+    const invoiceCount = await Invoice.countDocuments({ memberID: id });
+    const paymentCount = await Payment.countDocuments({ memberID: id });
+
+    if (invoiceCount > 0 || paymentCount > 0) {
+      return res.status(400).json({
+        error: `Cannot delete member with existing records (${invoiceCount} invoices, ${paymentCount} payments). Consider marking as inactive instead.`
+      });
+    }
+
+    await Member.findByIdAndDelete(id);
+    res.json({ success: true, message: 'Member deleted successfully' });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });

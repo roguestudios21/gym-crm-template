@@ -96,11 +96,31 @@ const MemberForm = () => {
     };
 
     const handleFileChange = (e) => {
-        const selected = e.target.files[0];
-        if (selected) {
-            setFile(selected);
-            setPreview(URL.createObjectURL(selected));
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (!validTypes.includes(file.type)) {
+            alert('Please upload a JPEG or PNG image only');
+            e.target.value = ''; // Reset input
+            setFile(null);
+            setPreview(null);
+            return;
         }
+
+        // Validate file size (5MB max)
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            alert('File size must be less than 5MB');
+            e.target.value = ''; // Reset input
+            setFile(null);
+            setPreview(null);
+            return;
+        }
+
+        setFile(file);
+        setPreview(URL.createObjectURL(file));
     };
 
     const handleSubmit = async (e) => {

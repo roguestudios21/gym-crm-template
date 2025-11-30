@@ -5,8 +5,16 @@ connectDB();
 
 const cors = require('cors');
 const path = require('path');
+const db = require('./config/db');
 
-app.use(cors());
+// Configure CORS properly
+const corsOptions = {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 

@@ -1,11 +1,23 @@
 const express = require("express");
 const router = express.Router();
 const Staff = require("../models/Staff");
+const { staffValidation } = require("../middleware/validation");
 
 // LIST ALL STAFF
 router.get("/", async (req, res) => {
   try {
     const staff = await Staff.find();
+    res.json(staff);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET SINGLE STAFF
+router.get("/:id", async (req, res) => {
+  try {
+    const staff = await Staff.findById(req.params.id);
+    if (!staff) return res.status(404).json({ error: "Staff not found" });
     res.json(staff);
   } catch (err) {
     res.status(500).json({ error: err.message });
