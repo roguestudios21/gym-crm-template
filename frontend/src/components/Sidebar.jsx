@@ -6,7 +6,7 @@ import {
     TrendingUp, BarChart2, Bell, Settings
 } from 'lucide-react';
 
-import logo from '../assets/cindral_logo_user.png';
+import logo from '../assets/cindral_watermark_user.png';
 
 const Sidebar = () => {
     const location = useLocation();
